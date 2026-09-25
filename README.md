@@ -9,7 +9,7 @@ React + TypeScript + Vite user application. Authentication uses secure HTTP-only
 
 ## Docker
 
-    docker build -t solosync-frontend .
+    docker build --build-arg VITE_API_URL=https://api.solosync.live -t solosync-frontend .
     docker run --rm -p 8080:80 solosync-frontend
 
-Set VITE_API_URL at build time for a production API origin.
+The API URL is a build-time Vite variable. Rebuild the image when the production API origin changes.
