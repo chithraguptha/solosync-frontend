@@ -1,27 +1,26 @@
 # SoloSync Frontend
 
-React + TypeScript + Vite application for SoloSync.
+React + TypeScript + Vite dashboard for SoloSync.
 
-## MVP flow
+## Features
 
-1. Sign in or create a SoloSync account.
-2. Connect the user's WhatsApp account through a WAHA session.
-3. Scan the QR code from WhatsApp Linked Devices.
-4. Wait for the session to reach WORKING.
-5. Enter a WhatsApp chat or channel ID.
-6. Publish a text message.
-7. The backend queues the message and records ₹0.10 usage after a successful send.
-
-Current test pricing is **₹399 activation + ₹0.10 per successful message**. Payments are disabled in the MVP; the backend records the ledger only.
+- Email/password and Google authentication.
+- WhatsApp QR pairing and connection status.
+- Text message publishing and history.
+- Dashboard delivery statistics.
+- Razorpay activation checkout.
+- Razorpay prepaid wallet top-ups.
+- Responsive operations-oriented UI.
 
 ## Local
 
-    npm install
-    VITE_API_URL=http://localhost:4000 npm run dev
+The recommended whole-stack setup lives in the backend repository: clone backend and frontend side by side, then from backend run `docker compose -f docker-compose.local.yml up --build` and open `http://localhost:5173`.
 
-## Docker
+For frontend-only development:
 
-    docker build --build-arg VITE_API_URL=https://api.solosync.live -t solosync-frontend .
-    docker run --rm -p 8080:80 solosync-frontend
+```bash
+npm install
+VITE_API_URL=http://localhost:4000 npm run dev
+```
 
-The API URL is a build-time Vite variable. Rebuild the image when the production API origin changes.
+Razorpay Checkout is loaded from Razorpay's hosted Checkout script. Payment secrets are never placed in the frontend; only the public Razorpay key and order metadata are returned by the backend.
