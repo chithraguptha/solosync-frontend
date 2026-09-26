@@ -10,7 +10,10 @@ React + TypeScript + Vite dashboard for SoloSync.
 - Dashboard delivery statistics.
 - Razorpay activation checkout.
 - Razorpay prepaid wallet top-ups.
-- Responsive operations-oriented UI.
+- Professional developer workspace with overview, messages, WhatsApp connection, wallet, API keys, API docs, playground and account screens.
+- Scoped API key creation, rotation and revocation UI.
+- Interactive API Playground with generated cURL and live responses.
+- Responsive developer-focused UI.
 
 ## Local
 
