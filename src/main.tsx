@@ -73,7 +73,7 @@ function App() {
   async function rotateKey(id:string){if(!confirm("Rotate this API key? The current key will be revoked immediately."))return;try{const x=await call("/api/developer/api-keys/"+id+"/rotate",{method:"POST",body:"{}"});setNewSecret(x.key);await loadKeys();setNotice("New key generated. Copy the secret now.")}catch(e:any){setError(e.message)}}
 
   const playgroundMethod = playgroundEndpoint.startsWith("POST ") ? "POST" : "GET";
-  const playgroundPath = playgroundEndpoint.replace(/^(GET|POST)\\s+/, "");
+  const playgroundPath = playgroundEndpoint.replace(/^(GET|POST)\s+/, "");
   const playgroundCurl = useMemo(()=>{const body=playgroundMethod==="POST"?" \\\n  -H 'Content-Type: application/json' \\\n  -d '"+playgroundBody.replaceAll("'","\\'")+"'":"";return "curl "+(playgroundMethod==="POST"?"-X POST ":"")+API+playgroundPath+" \\\n  -H 'Authorization: Bearer ss_live_…'"+body},[playgroundEndpoint,playgroundPath,playgroundBody,playgroundMethod]);
   async function runPlayground(){if(!playgroundKey.trim()){setError("Paste an API key into the Playground first.");return}setPlaygroundBusy(true);setPlaygroundResult("");try{let body:string|undefined;if(playgroundMethod==="POST"){JSON.parse(playgroundBody);body=playgroundBody}const r=await fetch(API+playgroundPath,{method:playgroundMethod,headers:{Authorization:"Bearer "+playgroundKey.trim(),...(body?{"Content-Type":"application/json"}:{})},body});const text=await r.text();let formatted=text;try{formatted=JSON.stringify(JSON.parse(text),null,2)}catch{}setPlaygroundResult("HTTP "+r.status+"\n\n"+formatted)}catch(e:any){setPlaygroundResult(e.message||"Request failed")}finally{setPlaygroundBusy(false)}}
 
