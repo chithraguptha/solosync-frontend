@@ -36,7 +36,7 @@ function Stat({ label, value, detail }: { label: string; value: string | number;
 function StatusBadge({ status }: { status: string }) {
   const tone = status === "published" || status === "WORKING" || ["SERVER", "DEVICE", "READ", "PLAYED"].includes(status)
     ? "success" : status === "failed" || status === "ERROR" ? "danger" : "warning";
-  return <span className={"badge " + tone}>{String(status || "unknown").replaceAll("_", " ")}</span>;
+  return <span className={"badge " + tone}>{String(status || "unknown").replace(/_/g, " ")}</span>;
 }
 function Code({ children }: { children: string }) { return <pre className="code"><code>{children}</code></pre>; }
 
@@ -74,7 +74,7 @@ function App() {
 
   const playgroundMethod = playgroundEndpoint.startsWith("POST ") ? "POST" : "GET";
   const playgroundPath = playgroundEndpoint.replace(/^(GET|POST)\s+/, "");
-  const playgroundCurl = useMemo(()=>{const body=playgroundMethod==="POST"?" \\\n  -H 'Content-Type: application/json' \\\n  -d '"+playgroundBody.replaceAll("'","\\'")+"'":"";return "curl "+(playgroundMethod==="POST"?"-X POST ":"")+API+playgroundPath+" \\\n  -H 'Authorization: Bearer ss_live_…'"+body},[playgroundEndpoint,playgroundPath,playgroundBody,playgroundMethod]);
+  const playgroundCurl = useMemo(()=>{const body=playgroundMethod==="POST"?" \\\n  -H 'Content-Type: application/json' \\\n  -d '"+playgroundBody.replace(/\'/g,"\\'")+"'":"";return "curl "+(playgroundMethod==="POST"?"-X POST ":"")+API+playgroundPath+" \\\n  -H 'Authorization: Bearer ss_live_…'"+body},[playgroundEndpoint,playgroundPath,playgroundBody,playgroundMethod]);
   async function runPlayground(){if(!playgroundKey.trim()){setError("Paste an API key into the Playground first.");return}setPlaygroundBusy(true);setPlaygroundResult("");try{let body:string|undefined;if(playgroundMethod==="POST"){JSON.parse(playgroundBody);body=playgroundBody}const r=await fetch(API+playgroundPath,{method:playgroundMethod,headers:{Authorization:"Bearer "+playgroundKey.trim(),...(body?{"Content-Type":"application/json"}:{})},body});const text=await r.text();let formatted=text;try{formatted=JSON.stringify(JSON.parse(text),null,2)}catch{}setPlaygroundResult("HTTP "+r.status+"\n\n"+formatted)}catch(e:any){setPlaygroundResult(e.message||"Request failed")}finally{setPlaygroundBusy(false)}}
 
   if(!user)return <main className="auth-shell"><header className="auth-brand"><div className="brand-mark">SS</div><div><b>SoloSync</b><span>Developer platform</span></div></header><section className="auth-card"><p className="eyebrow">DEVELOPER PLATFORM</p><h1>Build on WhatsApp, without the plumbing.</h1><p className="muted">Manage your connection, wallet, API keys and production messaging from one developer workspace.</p><a className="google" href={API+"/api/auth/google"}>Continue with Google</a><div className="divider"><span>or</span></div><form onSubmit={submit}><input type="email" placeholder="Business email" value={email} onChange={e=>setEmail(e.target.value)} required/><input type="password" placeholder="Password" value={password} onChange={e=>setPassword(e.target.value)} minLength={8} required/><button className="primary">{mode==="login"?"Sign in":"Create account"}</button></form>{error&&<p className="error">{error}</p>}<button className="link" onClick={()=>setMode(mode==="login"?"register":"login")}>{mode==="login"?"Create an account with email":"I already have an account"}</button></section></main>;
