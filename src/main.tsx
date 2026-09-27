@@ -40,6 +40,32 @@ function StatusBadge({ status }: { status: string }) {
   return <span className={"badge " + tone}>{String(status || "unknown").replace(/_/g, " ")}</span>;
 }
 function Code({ children }: { children: string }) { return <pre className="code"><code>{children}</code></pre>; }
+function Spinner({ large }: { large?: boolean }) {
+  return <span className={"spinner" + (large ? " large" : "")} role="status" aria-label="Loading" />;
+}
+
+// WAHA's session statuses, collapsed to the five things the UI actually has
+// to say. Anything unrecognised is treated as in-progress rather than as
+// "not connected": a status we do not know about still means the server has
+// a session, and telling someone to start one they already have is the bug
+// this map exists to prevent.
+const CONNECTION_PHASE: Record<string, string> = {
+  NOT_CONNECTED: "idle",
+  STOPPED: "stopped",
+  STARTING: "starting",
+  SCAN_QR_CODE: "scan",
+  WORKING: "working",
+  FAILED: "failed",
+};
+
+const PHASE_COPY: Record<string, { title: string; heading: string; body: string }> = {
+  idle:     { title: "Connect WhatsApp",        heading: "Not connected",        body: "Start a connection to create the WhatsApp session and get a pairing QR code." },
+  starting: { title: "Starting the session",    heading: "Starting the session", body: "Waiting for WhatsApp to come up. This usually takes a few seconds — the QR code appears here as soon as it is ready." },
+  stopped:  { title: "Session stopped",         heading: "Session stopped",      body: "The WhatsApp session exists but is not running. Resume it, or disconnect to pair a different number." },
+  scan:     { title: "Scan the pairing QR",     heading: "Scan the pairing QR",  body: "" },
+  working:  { title: "WhatsApp is connected",   heading: "Connected",            body: "" },
+  failed:   { title: "Connection failed",       heading: "Connection failed",    body: "" },
+};
 
 // PageHeader and Endpoint live here, at module scope, rather than inside
 // App. A component declared inside another component is a brand new
@@ -63,7 +89,7 @@ function App() {
   const [keys,setKeys]=useState<any[]>([]),[keyName,setKeyName]=useState(""),[keyEnvironment,setKeyEnvironment]=useState<"test"|"live">("live"),[keyScopes,setKeyScopes]=useState<string[]>(SCOPES.map(x=>x[0])),[newSecret,setNewSecret]=useState("");
   const [playgroundKey,setPlaygroundKey]=useState(""),[playgroundEndpoint,setPlaygroundEndpoint]=useState("GET /v1/account"),[playgroundBody,setPlaygroundBody]=useState(JSON.stringify({chatId:"919876543210",text:"Hello from SoloSync"},null,2)),[playgroundResult,setPlaygroundResult]=useState(""),[playgroundBusy,setPlaygroundBusy]=useState(false);
   const [chatId,setChatId]=useState(""),[messageText,setMessageText]=useState("");
-  const [disconnecting,setDisconnecting]=useState(false);
+  const [disconnecting,setDisconnecting]=useState(false),[connecting,setConnecting]=useState(false);
 
   async function loadDashboard(){try{setStats(await call("/api/dashboard"))}catch{}}
   async function loadStatus(){
@@ -106,7 +132,11 @@ function App() {
     }
   }
   async function connect(){
-    setError(""); setNotice("");
+    // The POST creates a WAHA session and can take several seconds. Without
+    // a flag the button stayed live the whole time, so an impatient second
+    // click fired a second create against the same account.
+    if(connecting)return;
+    setError(""); setNotice(""); setConnecting(true);
     try {
       const x=await call("/api/whatsapp/connect",{method:"POST",body:"{}"});
       setConnection(x);
@@ -117,6 +147,8 @@ function App() {
     } catch(e:any) {
       setConnection((prev:any)=>({...prev,status:"FAILED",error:e.message}));
       setError(e.message);
+    } finally {
+      setConnecting(false);
     }
   }
   async function disconnect(){
@@ -166,7 +198,28 @@ function App() {
 
   function renderMessages(){return <div className="page"><PageHeader eyebrow="MESSAGING" title="Messages" description="Monitor outbound messages, delivery state and failures." action={<button className="secondary" onClick={()=>{loadMessages(messagePage);loadDashboard()}}>Refresh</button>}/><div className="message-compose panel"><div><p className="eyebrow">SEND MESSAGE</p><h2>Send through your connected account</h2><p className="muted">The same operation is available to developers through <code>POST /v1/messages</code>.</p></div><div className="compose-grid"><input placeholder="Recipient phone number or chat ID" value={chatId} onChange={e=>setChatId(e.target.value)}/><textarea placeholder="Message text" rows={3} value={messageText} onChange={e=>setMessageText(e.target.value)}/><button className="primary" disabled={status!=="WORKING"||!chatId||!messageText.trim()} onClick={publish}>Send message</button></div></div><div className="panel"><div className="panel-head"><div><p className="eyebrow">HISTORY</p><h2>Message activity</h2></div><span className="mini-label">{messageMeta?.total??0} records</span></div>{loadingMessages?<p className="muted">Loading message history…</p>:messages.length===0?<div className="empty">No messages yet.</div>:<div className="table-wrap"><table><thead><tr><th>Recipient</th><th>Message</th><th>Status</th><th>Delivery</th><th>Created</th></tr></thead><tbody>{messages.map(m=><tr key={m._id}><td className="mono">{m.chatId}</td><td className="message-cell">{m.text||m.kind}</td><td><StatusBadge status={m.status}/>{m.error&&<small className="error-line">{m.error}</small>}</td><td><StatusBadge status={m.deliveryStatus||"UNKNOWN"}/></td><td>{new Date(m.publishedAt||m.createdAt).toLocaleString()}</td></tr>)}</tbody></table></div>}{!!messageMeta?.pages&&messageMeta.pages>1&&<div className="pagination"><button className="secondary" disabled={messagePage<=1} onClick={()=>setMessagePage(x=>x-1)}>← Previous</button><span>Page {messagePage} of {messageMeta.pages}</span><button className="secondary" disabled={messagePage>=messageMeta.pages} onClick={()=>setMessagePage(x=>x+1)}>Next →</button></div>}</div></div>}
 
-  function renderConnection(){return <div className="page"><PageHeader eyebrow="WHATSAPP CONNECTION" title="Establish your connection" description="Pair the WhatsApp account that SoloSync will use for outbound messaging." action={status==="NOT_CONNECTED"?<button className="primary" onClick={connect}>Start connection</button>:<div className="header-actions"><StatusBadge status={status}/><button className="danger-button" disabled={disconnecting} onClick={disconnect}>{disconnecting?"Disconnecting…":"Disconnect"}</button></div>}/><div className="connection-grid"><div className="panel"><div className="panel-head"><div><p className="eyebrow">PAIRING</p><h2>{status==="WORKING"?"WhatsApp is connected":status==="FAILED"?"Connection failed":"Scan the pairing QR"}</h2></div><StatusBadge status={status}/></div>{status==="SCAN_QR_CODE"?<div className="qr-stage">{qr?<img src={qr} alt="WhatsApp pairing QR"/>:<button className="secondary" onClick={loadQr}>Load QR code</button>}<p className="muted">WhatsApp → Linked devices → Link a device → scan this QR.</p></div>:status==="WORKING"?<><div className="connected-state"><span className="live-dot"/><div><b>{connection?.connection?.phoneNumber?"+"+connection.connection.phoneNumber:"WhatsApp account"}</b><span>{connection?.connection?.pushName||"Ready for messaging"}</span></div><button className="danger-button" disabled={disconnecting} onClick={disconnect}>{disconnecting?"Disconnecting…":"Disconnect"}</button></div><p className="muted">Disconnecting unlinks SoloSync from the phone. Pairing again needs a new QR scan.</p></>:status==="FAILED"?<div className="connection-failure"><div className="failure-icon">!</div><div><b>WhatsApp session failed</b><p>{connection?.error||connection?.session?.error||"WAHA could not start the WhatsApp session. Check the server/WAHA logs and retry."}</p><code>GET /api/whatsapp/status</code></div><div className="failure-actions"><button className="secondary" onClick={connect}>Retry connection</button><button className="danger-button" disabled={disconnecting} onClick={disconnect}>{disconnecting?"Disconnecting…":"Disconnect and start over"}</button></div></div>:<div className="empty"><p>Start a connection to create the WAHA session and obtain a QR code.</p><button className="primary" onClick={connect}>Establish connection</button></div>}</div><div className="panel documentation"><p className="eyebrow">CONNECTION GUIDE</p><h2>How it works</h2><div className="doc-steps"><div><b>01</b><span><strong>Create your API key</strong>Generate a scoped key in API Keys before integrating.</span></div><div><b>02</b><span><strong>Pair WhatsApp</strong>Use the QR above. Your session remains managed by SoloSync.</span></div><div><b>03</b><span><strong>Check readiness</strong>Use <code>GET /v1/connection</code> until the status is <code>WORKING</code>.</span></div><div><b>04</b><span><strong>Send messages</strong>Call <code>POST /v1/messages</code>; SoloSync queues and tracks delivery.</span></div></div></div></div><div className="panel"><p className="eyebrow">DEVELOPER FLOW</p><h2>Connection API</h2><Code>{`curl -X POST ${API_DOCS}/v1/connection \\\n  -H "Authorization: Bearer ss_live_…"
+  function renderConnection(){
+    // One source of truth for the panel. The heading, the badge and the body
+    // used to be three separate ternaries over `status`, and they disagreed:
+    // a session reporting STARTING fell through every branch to the
+    // not-started body, so the page said "Scan the pairing QR", badged
+    // STARTING, and offered "Establish connection" for a connection that was
+    // already being established.
+    const phase = connecting ? "starting" : CONNECTION_PHASE[status] || "starting";
+    const copy = PHASE_COPY[phase];
+    return <div className="page"><PageHeader eyebrow="WHATSAPP CONNECTION" title="Establish your connection" description="Pair the WhatsApp account that SoloSync will use for outbound messaging." action={phase==="idle"?<button className="primary" disabled={connecting} onClick={connect}>{connecting?"Starting…":"Start connection"}</button>:<div className="header-actions"><StatusBadge status={connecting?"STARTING":status}/><button className="danger-button" disabled={disconnecting} onClick={disconnect}>{disconnecting?"Disconnecting…":"Disconnect"}</button></div>}/><div className="connection-grid"><div className="panel"><div className="panel-head"><div><p className="eyebrow">PAIRING</p><h2>{copy.title}</h2></div><StatusBadge status={connecting?"STARTING":status}/></div>{
+      phase==="working"?<><div className="connected-state"><span className="live-dot"/><div><b>{connection?.connection?.phoneNumber?"+"+connection.connection.phoneNumber:"WhatsApp account"}</b><span>{connection?.connection?.pushName||"Ready for messaging"}</span></div><button className="danger-button" disabled={disconnecting} onClick={disconnect}>{disconnecting?"Disconnecting…":"Disconnect"}</button></div><p className="muted">Disconnecting unlinks SoloSync from the phone. Pairing again needs a new QR scan.</p></>
+      :phase==="failed"?<div className="connection-failure"><div className="failure-icon">!</div><div><b>WhatsApp session failed</b><p>{connection?.error||connection?.session?.error||"WAHA could not start the WhatsApp session. Check the server/WAHA logs and retry."}</p><code>GET /api/whatsapp/status</code></div><div className="failure-actions"><button className="secondary" disabled={connecting} onClick={connect}>{connecting?"Retrying…":"Retry connection"}</button><button className="danger-button" disabled={disconnecting} onClick={disconnect}>{disconnecting?"Disconnecting…":"Disconnect and start over"}</button></div></div>
+      // The QR arrives a moment after the status flips to SCAN_QR_CODE, so
+      // this renders the waiting state rather than an empty frame or, as
+      // before, a "Load QR code" button asking the user to do the fetch the
+      // poll is already doing.
+      :phase==="scan"?<div className="qr-stage">{qr?<img src={qr} alt="WhatsApp pairing QR"/>:<div className="qr-pending"><Spinner/><span>Fetching the QR code…</span></div>}<p className="muted">WhatsApp → Linked devices → Link a device → scan this QR.</p><p className="hint">The code refreshes on its own. Leave this page open while you scan.</p></div>
+      // Transitional states: something is happening on the server and the
+      // only honest thing to show is that, plus a way out if it stalls.
+      :phase==="starting"||phase==="stopped"?<div className="stage-loading"><Spinner large/><b>{copy.heading}</b><p className="muted">{copy.body}</p>{phase==="stopped"&&<button className="primary" disabled={connecting} onClick={connect}>{connecting?"Resuming…":"Resume connection"}</button>}<button className="link" disabled={disconnecting} onClick={disconnect}>{disconnecting?"Cancelling…":"Cancel and start over"}</button></div>
+      :<div className="empty"><p>{copy.body}</p><button className="primary" disabled={connecting} onClick={connect}>{connecting?"Starting…":"Establish connection"}</button></div>
+    }</div><div className="panel documentation"><p className="eyebrow">CONNECTION GUIDE</p><h2>How it works</h2><div className="doc-steps"><div><b>01</b><span><strong>Create your API key</strong>Generate a scoped key in API Keys before integrating.</span></div><div><b>02</b><span><strong>Pair WhatsApp</strong>Use the QR above. Your session remains managed by SoloSync.</span></div><div><b>03</b><span><strong>Check readiness</strong>Use <code>GET /v1/connection</code> until the status is <code>WORKING</code>.</span></div><div><b>04</b><span><strong>Send messages</strong>Call <code>POST /v1/messages</code>; SoloSync queues and tracks delivery.</span></div></div></div></div><div className="panel"><p className="eyebrow">DEVELOPER FLOW</p><h2>Connection API</h2><Code>{`curl -X POST ${API_DOCS}/v1/connection \\\n  -H "Authorization: Bearer ss_live_…"
 
 curl ${API}/v1/connection \\\n  -H "Authorization: Bearer ss_live_…"`}</Code></div></div>}
 

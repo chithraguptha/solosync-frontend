@@ -59,3 +59,27 @@
 .scope-option{cursor:pointer;transition:border-color .12s ease,background .12s ease}
 .scope-option:hover{border-color:#2d3745}
 .scope-option:has(input[type="checkbox"]:checked){border-color:#31413a;background:#0c1310}
+
+/* Loading states for pairing.
+   STARTING and STOPPED previously fell through to the not-connected body,
+   so the page told people to start a connection that was already starting.
+   These are the states that branch now needs. */
+.spinner{display:inline-block;width:15px;height:15px;border:2px solid #2c3541;border-top-color:#cdd5df;border-radius:50%;animation:spin .7s linear infinite;flex:0 0 auto}
+.spinner.large{width:30px;height:30px;border-width:3px}
+@keyframes spin{to{transform:rotate(360deg)}}
+/* A spinner that never stops is noise to anyone who finds motion hard to
+   ignore, and this one can run for a while. */
+@media(prefers-reduced-motion:reduce){.spinner{animation-duration:2.4s}}
+
+.stage-loading{display:grid;justify-items:center;gap:11px;padding:40px 22px;text-align:center}
+.stage-loading b{font-size:13px;color:#e4e9ef}
+.stage-loading p{margin:0;max-width:380px;font-size:11px}
+.stage-loading .primary{margin-top:5px}
+.stage-loading .link{color:#7c8797}
+.stage-loading .link:hover{color:#cdd5df}
+
+/* The QR arrives a beat after the status flips, so the frame it will occupy
+   is held at roughly its final size — otherwise the panel jumps when the
+   image lands. */
+.qr-pending{display:grid;justify-items:center;align-content:center;gap:11px;width:260px;height:260px;margin:8px auto 16px;border:1px dashed #252e39;border-radius:12px;color:#697586;font-size:11px}
+.qr-stage .hint{font-size:10px;color:#5d6877;margin-top:6px}
