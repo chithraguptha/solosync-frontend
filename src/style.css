@@ -83,3 +83,10 @@
    image lands. */
 .qr-pending{display:grid;justify-items:center;align-content:center;gap:11px;width:260px;height:260px;margin:8px auto 16px;border:1px dashed #252e39;border-radius:12px;color:#697586;font-size:11px}
 .qr-stage .hint{font-size:10px;color:#5d6877;margin-top:6px}
+
+/* Activation gate on the wallet page. Recharging used to be offered before
+   the one-time setup fee had been paid, so the fee was silently skipped. */
+.activation-gate .activation-price{display:flex;align-items:baseline;justify-content:space-between;gap:16px;padding:14px 16px;margin-bottom:10px;background:#0b0f14;border:1px solid #2a3340;border-radius:10px}
+.activation-gate .activation-price span{font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:#697586}
+.activation-gate .activation-price strong{font-size:26px;letter-spacing:-.03em;color:#f1f3f5}
+.activation-gate .hint{font-size:10px;color:#5d6877;margin:9px 0 0;text-align:center}
