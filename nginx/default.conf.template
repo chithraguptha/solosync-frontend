@@ -1,3 +1,10 @@
+# Rendered at container start by the nginx image's entrypoint, which
+# substitutes ${BACKEND_*} from the environment and leaves nginx's own $vars
+# alone. Defaults (Dockerfile) reproduce the Docker Compose setup:
+#   BACKEND_UPSTREAM=http://backend:4000  BACKEND_HOST_HEADER=$host
+# On Azure Container Apps, internal ingress routes by Host, so the backend's
+# own app name goes in both, and the browser's host still travels as
+# X-Forwarded-Host.
 server {
   listen 80;
   server_name _;
@@ -10,9 +17,9 @@ server {
   # Keep the browser same-origin with the dashboard. This also prevents a
   # production build from accidentally calling localhost:4000.
   location /api/ {
-    proxy_pass http://backend:4000;
+    proxy_pass ${BACKEND_UPSTREAM};
     proxy_http_version 1.1;
-    proxy_set_header Host $host;
+    proxy_set_header Host ${BACKEND_HOST_HEADER};
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -22,9 +29,9 @@ server {
   }
 
   location /v1/ {
-    proxy_pass http://backend:4000;
+    proxy_pass ${BACKEND_UPSTREAM};
     proxy_http_version 1.1;
-    proxy_set_header Host $host;
+    proxy_set_header Host ${BACKEND_HOST_HEADER};
     proxy_set_header X-Real-IP $remote_addr;
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
@@ -32,9 +39,9 @@ server {
   }
 
   location = /openapi.json {
-    proxy_pass http://backend:4000/openapi.json;
+    proxy_pass ${BACKEND_UPSTREAM}/openapi.json;
     proxy_http_version 1.1;
-    proxy_set_header Host $host;
+    proxy_set_header Host ${BACKEND_HOST_HEADER};
     proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
     proxy_set_header X-Forwarded-Proto $scheme;
   }
