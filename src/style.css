@@ -103,3 +103,10 @@
 .coupon-panel .input-button{min-width:280px}
 .coupon-panel .input-button input{text-transform:uppercase;letter-spacing:.06em}
 @media(max-width:760px){.coupon-banner,.coupon-panel{flex-direction:column;align-items:stretch}.coupon-panel .input-button{min-width:0}}
+
+.numbers-panel{margin-bottom:16px}
+.numbers-panel .panel-head{align-items:flex-start}
+.selected-row td{background:#111821}
+.default-badge{margin-left:8px;vertical-align:middle}
+.block{display:block;margin-top:2px}
+.compose-grid select{background:#090c10;border:1px solid #303744;border-radius:9px;color:#e8edf4;padding:10px 12px}
